@@ -2193,3 +2193,59 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                                                 "failed: %r", 100):
             self._winutils.execute_process_as_user(token, args, True,
                                                    new_console)
+
+    def _test_is_realtime_clock_uct(self, utc=1, exception=False):
+
+        if exception:
+            self._winreg_mock.QueryValueEx.side_effect = OSError("fake error")
+
+        self._winreg_mock.QueryValueEx.return_value = [utc]
+
+        response = self._winutils.is_real_time_clock_utc()
+
+        if exception:
+            expected_result = False
+        else:
+            if utc == 0:
+                expected_result = utc
+            else:
+                expected_result = utc != 0
+
+        self.assertEqual(response, expected_result)
+
+        self._winreg_mock.OpenKey.assert_called_with(
+            self._winreg_mock.HKEY_LOCAL_MACHINE,
+            'SYSTEM\\CurrentControlSet\\Control\\'
+            'TimeZoneInformation')
+        self._winreg_mock.QueryValueEx.assert_called_with(
+            self._winreg_mock.OpenKey.return_value.__enter__.return_value,
+            self._winutils.REALTIME_IS_UNIVERSAL_KEY_NAME)
+
+    def test_is_realtime_clock_utc(self):
+        self._test_is_realtime_clock_uct()
+
+    def test_is_not_realtime_clock_utc(self):
+        self._test_is_realtime_clock_uct(utc=0)
+
+    def test_is_realtime_clock_utc_exception(self):
+        self._test_is_realtime_clock_uct(exception=True)
+
+    def _test_set_real_time_clock_utc(self, utc):
+        self._winutils.set_real_time_clock_utc(utc)
+
+        self._winreg_mock.OpenKey.assert_called_with(
+            self._winreg_mock.HKEY_LOCAL_MACHINE,
+            'SYSTEM\\CurrentControlSet\\Control\\'
+            'TimeZoneInformation',
+            0, self._winreg_mock.KEY_ALL_ACCESS)
+
+        self._winreg_mock.SetValueEx.assert_called_with(
+            self._winreg_mock.OpenKey.return_value.__enter__.return_value,
+            self._winutils.REALTIME_IS_UNIVERSAL_KEY_NAME, 0,
+            self._winreg_mock.REG_DWORD, 1 if utc else 0)
+
+    def test_set_real_time_clock_utc_set_zero(self):
+        self._test_set_real_time_clock_utc(utc=0)
+
+    def test_set_real_time_clock_utc(self):
+        self._test_set_real_time_clock_utc(utc=1)
