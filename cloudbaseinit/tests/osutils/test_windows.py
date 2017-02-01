@@ -2193,3 +2193,28 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                                                 "failed: %r", 100):
             self._winutils.execute_process_as_user(token, args, True,
                                                    new_console)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.execute_system32_process')
+    def _test_trim(self, mock_execute_process, err):
+        if err:
+            mock_execute_process.return_value = ("fake out", "", 1)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.enable_trim, True)
+        else:
+            args = ["fsutil.exe", "behavior",
+                    "set", "disabledeletenotify"]
+
+            mock_execute_process.return_value = ("fake out", "fake err", 0)
+
+            self._winutils.enable_trim(True)
+            mock_execute_process.assert_called_with(args + ["0"])
+
+            self._winutils.enable_trim(False)
+            mock_execute_process.assert_called_with(args + ["1"])
+
+    def test_trim(self):
+        self._test_trim(err=False)
+
+    def test_trim_exception(self):
+        self._test_trim(err=True)

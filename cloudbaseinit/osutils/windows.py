@@ -1322,3 +1322,13 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 "The given timezone name is unrecognised: %r" % timezone_name)
         timezone.Timezone(windows_name).set(self)
+
+    def enable_trim(self, enable):
+        """Enables or disables TRIM delete notifications."""
+        args = ["fsutil.exe", "behavior", "set", "disabledeletenotify",
+                "0" if enable else "1"]
+        (out, err, ret_val) = self.execute_system32_process(args)
+        if ret_val:
+            raise exception.CloudbaseInitException(
+                'TRIM configurating failed.\nOutput: %(out)s\nError:'
+                ' %(err)s' % {'out': out, 'err': err})

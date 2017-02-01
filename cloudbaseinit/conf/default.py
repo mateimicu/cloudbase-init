@@ -189,6 +189,10 @@ class GlobalOptions(conf_base.Options):
                 'cloud_config_plugins', default=[],
                 help='List which contains the name of the cloud config '
                      'plugins ordered by priority.'),
+
+            cfg.BoolOpt(
+                'trim_enabled', default=False,
+                help='Enables or disables TRIM delete notifications'),
         ]
 
         self._cli_options = [
