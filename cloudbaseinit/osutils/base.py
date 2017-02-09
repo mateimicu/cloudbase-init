@@ -133,3 +133,7 @@ class BaseOSUtils(object):
     def get_current_user(self):
         """Retrieve the username under which the current thread runs."""
         raise NotImplementedError()
+
+    def enable_trim(self, enable):
+        """Enables or disables TRIM delete notifications."""
+        raise NotImplementedError()

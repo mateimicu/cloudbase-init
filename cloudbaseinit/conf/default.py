@@ -216,6 +216,10 @@ class GlobalOptions(conf_base.Options):
             cfg.BoolOpt(
                 'enable_automatic_updates', default=False,
                 help='Enables automated updates'),
+            cfg.BoolOpt(
+                'trim_enabled', default=False,
+                help='Enables or disables TRIM delete notifications for '
+                     'the underlying storage device'),
         ]
 
         self._cli_options = [
