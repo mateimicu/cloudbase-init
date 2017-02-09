@@ -209,6 +209,10 @@ class GlobalOptions(conf_base.Options):
                 'If it is set on `disabled`, the created page file system will'
                 ' be disabled on the given volume point by setting the flags '
                 ' on 0. E.g.: "C:\pagefile.sys 0 0"'),
+            cfg.IntOpt(
+                'display_idle_timeout', default=0,
+                help='The idle timeout, in seconds, before powering off '
+                     'the display. Set 0 to leave the display always on'),
         ]
 
         self._cli_options = [
