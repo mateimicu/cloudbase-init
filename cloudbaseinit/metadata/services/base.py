@@ -183,6 +183,10 @@ class BaseMetadataService(object):
         """
         return False
 
+    def get_enable_automatic_updates(self):
+        """Check if the metadata provider enforces utomatic updates"""
+        pass
+
 
 class BaseHTTPMetadataService(BaseMetadataService):
 

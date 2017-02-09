@@ -213,6 +213,9 @@ class GlobalOptions(conf_base.Options):
                 'display_idle_timeout', default=0,
                 help='The idle timeout, in seconds, before powering off '
                      'the display. Set 0 to leave the display always on'),
+            cfg.BoolOpt(
+                'enable_automatic_updates', default=False,
+                help='Enables automated updates'),
         ]
 
         self._cli_options = [
