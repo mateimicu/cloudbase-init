@@ -136,4 +136,9 @@ class BaseOSUtils(object):
 
     def enable_trim(self, enable):
         """Enables or disables TRIM delete notifications."""
+
+    def is_real_time_clock_utc(self):
+        raise NotImplementedError()
+
+    def set_real_time_clock_utc(self, utc):
         raise NotImplementedError()

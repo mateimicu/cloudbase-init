@@ -363,6 +363,8 @@ class WindowsUtils(base.BaseOSUtils):
     SERVICE_START_MODE_MANUAL = "Manual"
     SERVICE_START_MODE_DISABLED = "Disabled"
 
+    REALTIME_IS_UNIVERSAL_KEY_NAME = "RealTimeIsUniversal"
+
     ComputerNamePhysicalDnsHostname = 5
 
     _config_key = 'SOFTWARE\\Cloudbase Solutions\\Cloudbase-Init\\'
@@ -1411,3 +1413,22 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 'TRIM configurating failed.\nOutput: %(out)s\nError:'
                 ' %(err)s' % {'out': out, 'err': err})
+
+    def is_real_time_clock_utc(self):
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            'SYSTEM\\CurrentControlSet\\Control\\'
+                            'TimeZoneInformation') as key:
+            try:
+                utc = winreg.QueryValueEx(
+                    key, self.REALTIME_IS_UNIVERSAL_KEY_NAME)[0]
+                return utc != 0
+            except OSError:
+                return False
+
+    def set_real_time_clock_utc(self, utc):
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            'SYSTEM\\CurrentControlSet\\Control\\'
+                            'TimeZoneInformation',
+                            0, winreg.KEY_ALL_ACCESS) as key:
+            winreg.SetValueEx(key, self.REALTIME_IS_UNIVERSAL_KEY_NAME, 0,
+                              winreg.REG_DWORD, 1 if utc else 0)
