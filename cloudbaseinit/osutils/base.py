@@ -142,3 +142,9 @@ class BaseOSUtils(object):
 
     def set_real_time_clock_utc(self, utc):
         raise NotImplementedError()
+
+    def set_path_admin_acls(self, path):
+        raise NotImplementedError()
+
+    def take_path_ownership(self, path, username=None):
+        raise NotImplementedError()

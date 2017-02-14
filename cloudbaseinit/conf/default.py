@@ -242,6 +242,16 @@ class GlobalOptions(conf_base.Options):
                 'set_unique_boot_disk_id', default=True,
                 help='Sets a new random unique id on the boot disk to avoid '
                      'collisions'),
+            cfg.BoolOpt(
+                'process_userdata', default=True,
+                help='Processes the userdata content based on the type, e.g. '
+                     'executing a PowerShell script'),
+            cfg.StrOpt(
+                'userdata_path',
+                default=None,
+                help='Copies the userdata to the given file path. The path '
+                     'can include environment variables that will be expanded,'
+                     ' e.g. "%%SYSTEMDRIVE%%\\CloudbaseInit\\UserData.bin"'),
         ]
 
         self._cli_options = [
