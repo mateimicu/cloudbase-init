@@ -13,9 +13,10 @@
 #    under the License.
 
 import abc
+import six
 
-
-class BaseInstrumentation(metaclass=abc.ABCMeta):
+@six.add_metaclass(abc.ABCMeta)
+class BaseInstrumentation(object):
     @abc.abstractmethod
     def instrument_call(self, name, callable):
         pass

@@ -118,14 +118,14 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                                   'fake container', True)
             else:
                 self._x509_manager._generate_key('fake container', True)
-
                 mock_CryptAcquireContext.assert_called_with(
                     mock_byref(), 'fake container', None,
                     self.x509.cryptoapi.PROV_RSA_FULL,
                     self.x509.cryptoapi.CRYPT_MACHINE_KEYSET)
+
                 mock_CryptGenKey.assert_called_with(
-                    mock_HANDLE(), self.x509.cryptoapi.AT_SIGNATURE,
-                    0x08000000, mock_HANDLE())
+                    mock_HANDLE(), self.x509.cryptoapi.AT_KEYEXCHANGE,
+                    0x08000000, mock_byref(mock_HANDLE()))
                 mock_CryptDestroyKey.assert_called_once_with(
                     mock_HANDLE())
                 mock_CryptReleaseContext.assert_called_once_with(

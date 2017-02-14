@@ -14,6 +14,7 @@
 
 import os
 import unittest
+import importlib
 
 import six
 try:
@@ -23,7 +24,6 @@ except ImportError:
 
 from cloudbaseinit import exception
 from cloudbaseinit import conf as cloudbaseinit_conf
-from cloudbaseinit.metadata.services import azureservice
 from cloudbaseinit.tests import testutils
 
 CONF = cloudbaseinit_conf.CONF
@@ -34,7 +34,20 @@ class AzureServiceTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     def setUp(self, mock_osutils):
-        self._azureservice = azureservice.AzureService()
+        module_path = "cloudbaseinit.metadata.services.azureservice"
+        self._mock_wintypes = mock.MagicMock()
+        self._mock_wintypes = mock.MagicMock()
+
+        self._module_patcher = mock.patch.dict(
+            'sys.modules',
+            {'ctypes': self._mock_wintypes,
+             'ctypes.wintypes': self._mock_wintypes})
+        self._module_patcher.start()
+        self.addCleanup(self._module_patcher.stop)
+        self._azure_module = importlib.import_module(module_path)
+
+        self._azureservice = self._azure_module.AzureService()
+
         self._logsnatcher = testutils.LogSnatcher("cloudbaseinit.metadata"
                                                   ".services.azureservice")
 
@@ -60,7 +73,8 @@ class AzureServiceTest(unittest.TestCase):
 
     def test_get_wire_server_endpoint_address(self):
         dhcp_option = {
-            azureservice.WIRESERVER_DHCP_OPTION: 'mock.sentinel.endpoint'}
+            self._azure_module.WIRESERVER_DHCP_OPTION: 'mock.sentinel.endpoint'
+        }
         self._test_get_wire_server_endpoint_address(dhcp_option=dhcp_option)
 
     @mock.patch('cloudbaseinit.metadata.services.base.'
@@ -105,7 +119,7 @@ class AzureServiceTest(unittest.TestCase):
                                        data_xml="fake-data")
 
     def test_encode_xml(self):
-        fake_root_xml = azureservice.ElementTree.Element("faketag")
+        fake_root_xml = self._azure_module.ElementTree.Element("faketag")
         expected_encoded_xml = ("<?xml version='1.0' encoding='utf-8'?>"
                                 "\n<faketag />").encode()
         self.assertEqual(self._azureservice._encode_xml(fake_root_xml),
@@ -122,7 +136,7 @@ class AzureServiceTest(unittest.TestCase):
         mock_description = 'FakeDescription'
         mock_get_incarnation.return_value = "fake"
         mock_get_container_id.return_value = "fakeid"
-        mock_get_role_instance_id.return_value ="fakeroleid"
+        mock_get_role_instance_id.return_value = "fakeroleid"
         x = self._azureservice._get_health_report_xml(mock_state,
                                                       mock_substatus,
                                                       mock_description)
@@ -202,22 +216,22 @@ class AzureServiceTest(unittest.TestCase):
     def test_provisioning_started(self, mock_post_health_status):
         self._azureservice.provisioning_started()
         mock_post_health_status.assert_called_once_with(
-            azureservice.HEALTH_STATE_NOT_READY,
-            azureservice.HEALTH_SUBSTATE_PROVISIONING,
+            self._azure_module.HEALTH_STATE_NOT_READY,
+            self._azure_module.HEALTH_SUBSTATE_PROVISIONING,
             "Cloudbase-Init is preparing your computer for first use...")
 
     @mock.patch(MODPATH + "._post_health_status")
     def test_provisioning_completed(self, mock_post_health_status):
         self._azureservice.provisioning_completed()
         mock_post_health_status.assert_called_once_with(
-            azureservice.HEALTH_STATE_READY)
+            self._azure_module.HEALTH_STATE_READY)
 
     @mock.patch(MODPATH + "._post_health_status")
     def test_provisioning_failed(self, mock_post_health_status):
         self._azureservice.provisioning_failed()
         mock_post_health_status.assert_called_once_with(
-            azureservice.HEALTH_STATE_NOT_READY,
-            azureservice.HEALTH_SUBSTATE_PROVISIONING_FAILED,
+            self._azure_module.HEALTH_STATE_NOT_READY,
+            self._azure_module.HEALTH_SUBSTATE_PROVISIONING_FAILED,
             "Provisioning failed")
 
     @mock.patch(MODPATH + "._wire_server_request")
@@ -242,7 +256,7 @@ class AzureServiceTest(unittest.TestCase):
         mock_thumbprint = mock.sentinel.thumbprint
         self._azureservice.post_rdp_cert_thumbprint(mock_thumbprint)
         expected_props = {
-            azureservice.ROLE_PROPERTY_CERT_THUMB: mock_thumbprint}
+            self._azure_module.ROLE_PROPERTY_CERT_THUMB: mock_thumbprint}
         mock_post_role_properties.assert_called_once_with(expected_props)
 
     @mock.patch(MODPATH + "._wire_server_request")
@@ -336,7 +350,7 @@ class AzureServiceTest(unittest.TestCase):
         mock_version = mock.Mock()
         mock_get_versions.return_value = mock_version
         mock_version.Versions.Supported.Version = [version]
-        if azureservice.WIRE_SERVER_VERSION is not version:
+        if self._azure_module.WIRE_SERVER_VERSION is not version:
             self.assertRaises(exception.MetadaNotFoundException,
                               self._azureservice._check_version_header)
         else:
@@ -349,7 +363,7 @@ class AzureServiceTest(unittest.TestCase):
         self._test__check_version_header(version=version)
 
     def test_check_version_header_supported(self):
-        version = azureservice.WIRE_SERVER_VERSION
+        version = self._azure_module.WIRE_SERVER_VERSION
         self._test__check_version_header(version=version)
 
     @mock.patch(MODPATH + "._wire_server_request")

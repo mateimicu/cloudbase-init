@@ -15,12 +15,11 @@
 from oslo_log import log as oslo_logging
 import wmi
 
+from cloudbaseinit import constant
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import factory as osutils_factory
 
 LOG = oslo_logging.getLogger(__name__)
-
-POLICY_IGNORE_ALL_FAILURES = "ignoreallfailures"
 
 STORE_CURRENT = "{fa926493-6f1c-4193-a414-58f0b2456d1e}"
 
@@ -41,7 +40,7 @@ def _run_bcdedit(bcdedit_args):
             ' %(err)s' % {'out': out, 'err': err})
 
 
-def set_boot_status_policy(policy=POLICY_IGNORE_ALL_FAILURES):
+def set_boot_status_policy(policy=constant.POLICY_IGNORE_ALL_FAILURES):
     LOG.debug("Setting boot status policy: %s", policy)
     _run_bcdedit(["/set", "{current}", "bootstatuspolicy", policy])
 

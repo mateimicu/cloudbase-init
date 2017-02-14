@@ -59,8 +59,7 @@ class CreateUserPluginTests(unittest.TestCase):
     def _test_execute(self, mock_post_create_user, mock_create_user,
                       mock_get_password, mock_get_os_utils,
                       user_exists=False, group_adding_works=True,
-                      rename_admin_user=False, rename_admin_taken=False
-                    ):
+                      rename_admin_user=False, rename_admin_taken=False):
         shared_data = {}
         mock_osutils = mock.MagicMock()
         mock_service = mock.MagicMock()
@@ -84,7 +83,7 @@ class CreateUserPluginTests(unittest.TestCase):
 
         mock_get_os_utils.assert_called_once_with()
         mock_get_password.assert_called_once_with(mock_osutils)
-        
+
         if user_exists:
             mock_osutils.user_exists.assert_called_once_with(CONF.username)
             mock_osutils.set_user_password.assert_called_once_with(
@@ -142,4 +141,3 @@ class CreateUserPluginTests(unittest.TestCase):
     def test_execute_rename_admin_taken(self):
         self._test_execute(rename_admin_user=True,
                            rename_admin_taken=True)
-

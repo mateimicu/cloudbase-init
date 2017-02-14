@@ -108,13 +108,16 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
                       mock_check_winrm_service, mock_get_os_utils,
                       service_status):
         mock_service = mock.MagicMock()
+        mock_service.get_winrm_listeners_configuration.return_value = [
+            {"protocol": "HTTPS"}]
         mock_listener_config = mock.MagicMock()
         mock_cert_thumbprint = mock.MagicMock()
+        mock_x509_cert = mock.MagicMock()
         shared_data = 'fake data'
         mock_osutils = mock.MagicMock()
         mock_get_os_utils.return_value = mock_osutils
         mock_check_winrm_service.return_value = service_status
-        mock_create_cert.return_value = mock_cert_thumbprint
+        mock_create_cert.return_value = mock_cert_thumbprint, mock_x509_cert
         mock_WinRMConfig().get_listener.return_value = mock_listener_config
         mock_listener_config.get.return_value = 9999
 

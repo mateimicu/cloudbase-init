@@ -14,6 +14,7 @@
 
 import os
 import unittest
+import importlib
 
 try:
     import unittest.mock as mock
@@ -22,7 +23,7 @@ except ImportError:
 
 from cloudbaseinit import exception
 from cloudbaseinit.plugins.common import base
-from cloudbaseinit.plugins.windows import licensing
+# from cloudbaseinit.plugins.windows import licensing
 from cloudbaseinit.tests import testutils
 
 
@@ -30,12 +31,20 @@ class WindowsLicensingPluginTests(unittest.TestCase):
 
     def setUp(self):
         module_path = 'cloudbaseinit.plugins.windows.licensing'
-        self._licensing = licensing.WindowsLicensingPlugin()
+        self._fake_wmi = mock.MagicMock()
+        _module_patcher = mock.patch.dict(
+            "sys.modules", {"wmi": self._fake_wmi})
+        _module_patcher.start()
+        self.addCleanup(_module_patcher.stop)
+
+        self._licensing_module = importlib.import_module(module_path)
+        self._licensing = self._licensing_module.WindowsLicensingPlugin()
         self.snatcher = testutils.LogSnatcher(module_path)
 
     @testutils.ConfPatcher('set_avma_product_key', "fake product_key")
     @mock.patch('cloudbaseinit.utils.windows.licensing.set_product_key')
-    @mock.patch('cloudbaseinit.utils.windows.licensing.get_volume_activation_product_key')    
+    @mock.patch('cloudbaseinit.utils.windows.licensing.'
+                'get_volume_activation_product_key')
     @mock.patch('cloudbaseinit.utils.windows.licensing.get_kms_product')
     def _test_set_product_key(self, mock_get_kms_product,
                               mock_get_volume_activation_product_key,
@@ -47,7 +56,7 @@ class WindowsLicensingPluginTests(unittest.TestCase):
         mock_service = mock.Mock()
         expected_logging = []
         description = "fake description"
-        mock_get_kms_product.return_value =  (description, None, is_current)
+        mock_get_kms_product.return_value = (description, None, is_current)
         if is_current:
             expected_logging += [
                 'Product "%s" is already the current one, no need to set '
@@ -56,7 +65,7 @@ class WindowsLicensingPluginTests(unittest.TestCase):
         else:
             mock_service.get_use_avma_licensing.return_value = use_avma
             if use_avma is None:
-                use_avma = licensing.CONF.set_avma_product_key
+                use_avma = set_kms_product_key
 
             expected_logging += [
                 "Use AVMA: %s" % use_avma
@@ -74,7 +83,7 @@ class WindowsLicensingPluginTests(unittest.TestCase):
                 expected_logging += [
                     "KMS product key not found for this OS"
                 ]
-            
+
             if not product_key and set_kms_product_key:
                 mock_get_volume_activation_product_key.return_value = \
                     product_key
@@ -85,11 +94,11 @@ class WindowsLicensingPluginTests(unittest.TestCase):
                 expected_logging += [
                     "Setting product key: %s" % product_key
                 ]
-        with testutils.ConfPatcher('set_avma_product_key', set_kms_product_key):
+        with testutils.ConfPatcher('set_avma_product_key',
+                                   set_kms_product_key):
             with self.snatcher:
                 self._licensing._set_product_key(mock_service)
             self.assertEqual(self.snatcher.output, expected_logging)
-
 
     def test_set_product_key_already_used(self):
         self._test_set_product_key(is_current=True)
@@ -106,11 +115,11 @@ class WindowsLicensingPluginTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.utils.windows.licensing'
                 '.is_eval')
     def _test_execute(self, mock_is_eval, mock_get_licensing_info,
-                      mock_get_os_utils, eval_end_date="fake date", nano=False):
+                      mock_get_os_utils, eval_end_date="fake date",
+                      nano=False):
         mock_osutils = mock.MagicMock()
         mock_osutils.is_nano_server.return_value = nano
         mock_get_os_utils.return_value = mock_osutils
-       
 
         expected_logging = []
         if nano:
@@ -132,8 +141,8 @@ class WindowsLicensingPluginTests(unittest.TestCase):
                 self._licensing._activate_windows = mock.Mock()
 
             mock_get_licensing_info.return_value = "fake info"
-            expected_logging += ['Microsoft Windows license info:\n%s' % 
-                                mock_get_licensing_info.return_value]
+            expected_logging += ['Microsoft Windows license info:\n%s' %
+                                 mock_get_licensing_info.return_value]
 
         with self.snatcher:
             response = self._licensing.execute(service=None, shared_data=None)
@@ -150,7 +159,7 @@ class WindowsLicensingPluginTests(unittest.TestCase):
                 self._licensing._set_kms_host.assert_called_once_with(None)
                 self._licensing._activate_windows.assert_called_once_with(None)
             mock_get_licensing_info.assert_called_once_with()
-        
+
         self.assertEqual(self.snatcher.output, expected_logging)
         self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
 
@@ -170,7 +179,7 @@ class WindowsLicensingPluginTests(unittest.TestCase):
             mock_activate.return_value = "fake result"
             expected_logging += [
                 "Activating Windows",
-                "Activation result:\n%s" % 
+                "Activation result:\n%s" %
                 mock_activate.return_value
             ]
         with testutils.ConfPatcher('activate_windows', activate):
@@ -202,5 +211,3 @@ class WindowsLicensingPluginTests(unittest.TestCase):
 
     def test_set_no_kms_host(self):
         self._test_set_kms_host(kms_host=None)
-
-

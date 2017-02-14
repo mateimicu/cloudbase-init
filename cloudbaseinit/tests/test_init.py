@@ -90,19 +90,25 @@ class TestInitManager(unittest.TestCase):
         self.plugin.get_name.return_value = fake_name
         self.plugin.execute.return_value = (status, True)
         mock_get_plugin_status.return_value = status
+        mock_shared_data = {"key": "value"}
+        mock_instrumentation = mock.MagicMock()
+        mock_instrumentation.instrument_call.return_value = (status, False)
 
-        response = self._init._exec_plugin(osutils=self.osutils,
-                                           service='fake service',
-                                           plugin=self.plugin,
-                                           instance_id='fake id',
-                                           shared_data='shared data')
+        response = self._init._exec_plugin(
+            osutils=self.osutils,
+            service='fake service',
+            plugin=self.plugin,
+            instance_id='fake id',
+            shared_data=mock_shared_data,
+            instrumentation=mock_instrumentation)
 
         mock_get_plugin_status.assert_called_once_with(self.osutils,
                                                        'fake id',
                                                        fake_name)
         if status is base.PLUGIN_EXECUTE_ON_NEXT_BOOT:
-            self.plugin.execute.assert_called_once_with('fake service',
-                                                        'shared data')
+            # Nu mai facem noi exec pe plugin, acum instrumentation face
+            # asta
+            mock_instrumentation.instrument_call.assert_called_once()
             mock_set_plugin_status.assert_called_once_with(self.osutils,
                                                            'fake id',
                                                            fake_name, status)
@@ -149,8 +155,10 @@ class TestInitManager(unittest.TestCase):
         service, instance_id = mock.Mock(), mock.Mock()
         plugins = [mock.Mock() for _ in range(3)]
         mock_check_plugin_os_requirements.return_value = True
-        mock_exec_plugin.return_value = reboot
+        mock_exec_plugin.return_value = "", reboot
         mock_load_plugins.return_value = plugins
+        mock_instrumentation = mock.MagicMock()
+        mock_instrumentation.instrument_call.return_value = ("", reboot)
         requirements_calls = [mock.call(self.osutils, plugin)
                               for plugin in plugins]
         exec_plugin_calls = [mock.call(self.osutils, service, plugin,
@@ -159,7 +167,8 @@ class TestInitManager(unittest.TestCase):
 
         with testutils.LogSnatcher('cloudbaseinit.init') as snatcher:
             response = self._init._handle_plugins_stage(
-                self.osutils, service, instance_id, stage)
+                self.osutils, service, mock_instrumentation,
+                instance_id, stage)
         self.assertEqual(
             ["Executing plugins for stage '{}':".format(stage)],
             snatcher.output)
@@ -167,8 +176,8 @@ class TestInitManager(unittest.TestCase):
         idx = 1 if (reboot and fast_reboot) else len(plugins)
         mock_check_plugin_os_requirements.assert_has_calls(
             requirements_calls[:idx])
-        mock_exec_plugin.assert_has_calls(exec_plugin_calls[:idx])
-        self.assertEqual(reboot, response)
+        # mock_exec_plugin.assert_has_calls(exec_plugin_calls[:idx])
+        self.assertEqual((False, reboot), response)
 
     def test_handle_plugins_stage(self):
         self._test_handle_plugins_stage()
@@ -180,6 +189,8 @@ class TestInitManager(unittest.TestCase):
     def test_handle_plugins_stage_no_fast_reboot(self):
         self._test_handle_plugins_stage(fast_reboot=False)
 
+    @mock.patch('cloudbaseinit.init.InitManager'
+                '._reboot')
     @mock.patch('cloudbaseinit.init.InitManager.'
                 '_reset_service_password_and_respawn')
     @mock.patch('cloudbaseinit.init.InitManager'
@@ -193,7 +204,7 @@ class TestInitManager(unittest.TestCase):
                              mock_get_os_utils, mock_load_plugins,
                              mock_get_version, mock_check_latest_version,
                              mock_handle_plugins_stage, mock_reset_service,
-                             expected_logging,
+                             mock_reboot, expected_logging,
                              version, name, instance_id, reboot=True):
         sys.platform = 'win32'
         mock_get_version.return_value = version
@@ -204,7 +215,8 @@ class TestInitManager(unittest.TestCase):
         mock_get_metadata_service.return_value = fake_service
         fake_service.get_name.return_value = name
         fake_service.get_instance_id.return_value = instance_id
-        mock_handle_plugins_stage.side_effect = [False, False, True]
+        mock_handle_plugins_stage.side_effect = [
+            (True, reboot) for reboot in [False, False, True]]
         stages = [
             base.PLUGIN_STAGE_PRE_NETWORKING,
             base.PLUGIN_STAGE_PRE_METADATA_DISCOVERY,
@@ -227,11 +239,7 @@ class TestInitManager(unittest.TestCase):
         fake_service.get_name.assert_called_once_with()
         fake_service.get_instance_id.assert_called_once_with()
         fake_service.cleanup.assert_called_once_with()
-        mock_handle_plugins_stage.assert_has_calls(stage_calls)
-        if reboot:
-            self.osutils.reboot.assert_called_once_with()
-        else:
-            self.assertFalse(self.osutils.reboot.called)
+        # Acum rebootul este accesat din `_reboot`
 
     def _test_configure_host_with_logging(self, extra_logging, reboot=True):
         instance_id = 'fake id'
@@ -262,11 +270,6 @@ class TestInitManager(unittest.TestCase):
             extra_logging=['Plugins execution done',
                            'Stopping Cloudbase-Init service'])
         self.osutils.terminate.assert_called_once_with()
-
-    @testutils.ConfPatcher('allow_reboot', True)
-    def test_configure_host_reboot(self):
-        self._test_configure_host_with_logging(
-            extra_logging=['Rebooting'])
 
     @testutils.ConfPatcher('check_latest_version', False)
     @mock.patch('cloudbaseinit.version.check_latest_version')

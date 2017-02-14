@@ -19,7 +19,6 @@ from oslo_config import cfg
 
 from cloudbaseinit.conf import base as conf_base
 from cloudbaseinit import constant
-from cloudbaseinit.utils.windows import bootconfig
 
 
 class GlobalOptions(conf_base.Options):
@@ -231,7 +230,7 @@ class GlobalOptions(conf_base.Options):
             cfg.StrOpt(
                 'bcd_boot_status_policy',
                 default=None,
-                choices=[bootconfig.POLICY_IGNORE_ALL_FAILURES],
+                choices=[constant.POLICY_IGNORE_ALL_FAILURES],
                 help='Sets the Windows BCD boot status policy'),
             cfg.BoolOpt(
                 'bcd_enable_auto_recovery', default=False,
