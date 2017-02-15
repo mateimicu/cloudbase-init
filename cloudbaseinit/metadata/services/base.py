@@ -185,6 +185,11 @@ class BaseMetadataService(object):
 
     def get_enable_automatic_updates(self):
         """Check if the metadata provider enforces utomatic updates"""
+
+    def get_kms_host(self):
+        pass
+
+    def get_use_avma_licensing(self):
         pass
 
 
